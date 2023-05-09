@@ -1,0 +1,40 @@
+{
+    "restaurantId": 1,
+    "tableNum": 5,
+    "totalPrice": 12,
+    "order": [
+        {
+            "itemId": 2,
+            "title": "Beef Burgure",
+            "customisationSelections": {
+                "Choice of sauce": [{"title": "Tomato", "price": 3.2}],
+                "Choice of add-on": [{"title": "Tomato", "price": 3.2}]
+            },
+            "qty": 2,
+            "price": 6.2,
+            "status": "Awaiting payment"
+        },
+        {
+            "itemId": 1,
+            "title": "Vegetable Bowl",
+            "customisationSelections": {
+                "Choice of sauce": [{"title": "Tomato", "price": 3.2}],
+                "Choice of add-on": [{"title": "Tomato", "price": 3.2}]
+            },
+            "qty": 1,
+            "price": 5.8,
+            "status": "Awaiting payment"
+        },
+        {
+            "itemId": 4,
+            "title": "Vanilla Ice-cream",
+            "customisationSelections": {
+                "Choice of sauce": [{"title": "Tomato", "price": 3.2}],
+                "Choice of add-on": [{"title": "Tomato", "price": 3.2}]
+            },
+            "qty": 1,
+            "price": 4.0,
+            "status": "Preparing"
+        }
+    ]
+}    

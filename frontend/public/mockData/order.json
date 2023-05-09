@@ -1,0 +1,27 @@
+{
+  "restaurantId": 1,
+  "tableNum": 5,
+  "totalPrice": 12,
+  "order": [
+    {
+        "itemId": 2,
+        "customisationSelections": {
+            "Choice of sauce": [{"title": "Tomato", "price": 3.2}],
+            "Choice of add-on": [{"title": "Tomato", "price": 3.2}]
+        },
+        "qty": 2,
+        "price": 6.2,
+        "status": "Preparing"
+    },
+    {
+        "itemId": 1,
+        "customisationSelections": {
+            "Choice of sauce": [{"title": "Barbeque", "price": 3.2}],
+            "Choice of add-on": [{"title": "Fries", "price": 3.2}]
+        },
+        "qty": 1,
+        "price": 5.8,
+        "status": "Preparing"
+    }
+  ]
+}    

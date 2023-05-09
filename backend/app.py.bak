@@ -1,0 +1,350 @@
+# app.py
+from crypt import methods
+import os
+import sys
+from json import dumps
+from flask import Flask, request, send_file
+from menu_modifications import *
+from orders import *
+from assistance import *
+import statistics;
+from dotenv import load_dotenv
+from propelauth_flask import init_auth, current_user, current_org
+from flask_cors import CORS
+from propelauth_flask.user import UserRole
+from flask_socketio import SocketIO, join_room, leave_room, send, emit
+import data as d
+import pickle
+from pprint import pprint
+
+load_dotenv()
+
+with open('store.p', 'rb') as FILE:
+    store = pickle.load(FILE)
+    if store != {}:
+        d.restaurants = store["restaurants"]
+        d.menu_items = store["menu_items"]
+        d.item_count = store["item_count"]
+        d.orders = store["orders"]
+        d.order_count = store["order_count"]
+        d.assistance = store["assistance"]
+    FILE.close()
+    
+# with open('store.p', 'wb') as FILE: 
+#     data = {
+#         "restaurants": d.restaurants,
+#         "menu_items": d.menu_items,
+#         "item_count": d.item_count,
+#         "orders": [],
+#         "order_count": 0,
+#         "assistance": {}
+#     }
+#     FILE.write(pickle.dumps(data))
+#     FILE.close()
+
+
+
+def save(responseObj):
+    with open('store.p', 'wb') as FILE:
+        data = {
+            "restaurants": d.restaurants,
+            "menu_items": d.menu_items,
+            "item_count": d.item_count,
+            "orders": d.orders,
+            "order_count": d.order_count,
+            "assistance": d.assistance
+        }
+        FILE.write(pickle.dumps(data))
+        FILE.close()
+    return dumps(responseObj)
+
+
+def defaultHandler(err):
+    response = err.get_response()
+    print('response', err, err.get_response())
+    response.data = dumps({
+        "code": err.code,
+        "name": "System Error",
+        "message": err.get_description(),
+    })
+    response.content_type = 'application/json'
+    return response
+
+app = Flask(__name__)
+CORS(app)
+auth = init_auth("https://7854248030.propelauthtest.com", "f8f2050c1d28f4da391d025e992adf82d5642f0241bce5798ed67059e9975074f40847c339dc87e470e591bd5210b4ff")
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+
+app.register_error_handler(Exception, defaultHandler)
+
+@app.route("/whoami")
+#################@auth.require_user
+def who_am_i():
+    """This route is protected by require_user"""
+    return {"user_id": current_user.user_id}
+
+
+# =====================
+# === MENU CATEGORY ===
+# =====================
+
+""" 
+    Add Category
+"""
+@app.route("/menu/category/<org_id>", methods=['POST'])
+#################@auth.require_user
+def http_add_category(org_id):
+    input = request.get_json()
+    add_restaurant(org_id)
+    respObj = save(add_category(org_id, input['categoryTitle']))
+    return respObj
+
+
+""" 
+    Get Categories
+"""
+@app.route("/menu/categories/<org_id>", methods=['GET'])
+def http_get_categories(org_id):
+    # global restaurants
+    # print(restaurants)
+    add_restaurant(org_id)
+    return dumps(get_categories(org_id))
+
+
+""" 
+    Edit Category
+"""
+@app.route("/menu/<category_title>/<org_id>", methods=['PUT'])
+#################@auth.require_user
+def http_edit_category(category_title, org_id):
+    input = request.get_json()
+    respObj = save(edit_category(org_id, category_title, input["newCategory"]))
+    return respObj 
+
+
+""" 
+    Delete Category
+"""
+@app.route("/menu/category/<category_title>/<org_id>", methods=['DELETE'])
+#################@auth.require_user
+
+def http_delete_category(category_title, org_id):
+    respObj = save(delete_category(org_id, category_title)) 
+    return respObj
+
+
+""" 
+    Reorder categories
+"""
+@app.route("/menu/categories/<org_id>", methods=['PUT'])
+#################@auth.require_user
+def http_reorder_categories(org_id):
+    input = request.get_json()
+    respObj = save(order_categories(org_id, input["categories"])) 
+    return respObj
+
+
+
+# =====================
+# ===== MENU ITEM =====
+# =====================
+
+""" 
+    Add Menu Item
+"""
+@app.route("/menu/item/<org_id>", methods=['POST'])
+#################@auth.require_user
+def http_add_item(org_id):
+    add_restaurant(org_id)
+    input = request.get_json()
+    respObj =  save(dumps(add_menu_item(org_id, input["title"], input["price"], input["description"],  
+    input["dietType"], input["prepTime"], input["customisations"], input["img"], input["category"])))
+    return respObj
+
+
+""" 
+    Get Menu Item Details
+"""
+@app.route("/menu/item/<item_id>", methods=['GET'])
+def http_get_menu_item(item_id):
+    return dumps(get_menu_item(int(item_id)))
+
+
+""" 
+    Get Menu Item Ids
+"""
+@app.route("/menu/<category_title>/<org_id>", methods=['GET'])
+def http_get_menu_items(category_title, org_id):
+    return dumps(get_item_ids_category(org_id, category_title))
+
+
+""" 
+    Reorder items   
+"""
+@app.route("/menu/items/<org_id>", methods=['PUT'])
+#################@auth.require_user
+def http_reorder_items(org_id):
+    input = request.get_json()
+    respObj = save(reorder_items(org_id, input["categoryName"], input["items"]))  
+    return respObj
+
+
+""" 
+    Delete Item 
+"""
+@app.route("/menu/item/<item_id>/<org_id>", methods=['DELETE'])
+#################@auth.require_user
+def http_delete_item(item_id, org_id):
+    respObj = save(delete_menu_item(int(item_id), org_id)) 
+    return respObj
+
+""" 
+    Edit item   
+"""
+@app.route("/menu/item/edit/<org_id>", methods=['PUT'])
+#################@auth.require_user
+def http_edit_item(org_id):
+    input = request.get_json()
+    respObj = save(edit_menu_item(int(input["item_id"]), org_id, input["title"], input["price"], input["description"],  
+    input["dietType"], input["prepTime"], input["customisations"], input["img"], input["category"]))
+    return respObj
+
+
+
+@app.route("/search/<org_id>/<query>", methods=['GET'])
+def http_search_query(org_id, query):
+    return dumps(search_query(org_id, query))
+
+# =====================
+# ====== ORDERS =======
+# =====================
+@app.route("/order/status", methods=['POST'])
+def http_update_status():
+    input = request.get_json()
+    respObj = save(order_status(input["order_id"], input["item_id"], input["role"], input["status"]))
+    return respObj
+
+@app.route("/order-queue/<org_id>", methods=['GET'])
+def http_get_order_queue(org_id):
+    return dumps(get_order_queue(org_id))
+
+@app.route("/order/<order_id>", methods=['GET'])
+def http_get_order_details(order_id):
+    return dumps(get_order(int(order_id)))
+
+@app.route("/order/<org_id>", methods=['POST'])
+def http_order_item(org_id):
+    input = request.get_json()
+    respObj = save(place_order(input["restaurantId"], input["tableNum"], input["totalPrice"], input["items"]))
+    return respObj
+
+
+@socketio.on('create_order')
+def create_order(data):
+    org_id = data["orgId"]
+    output = place_order(data["restaurantId"], data["tableNum"], data["totalPrice"], data["items"])
+    emit('orders',  get_order_queue(org_id), broadcast=True, to=org_id)
+    emit('notification', {"orderId": output["order_id"], "newStatus": "Preparing", "table": data["tableNum"]}, broadcast=True, to=org_id)
+    save(None)
+
+
+@socketio.on('join')
+def on_join(data):
+    room = data['orgId']
+    join_room(room)
+    emit("assistance", get_assistance(room))
+    emit('orders', get_order_queue(room))
+
+@socketio.on('update_order_status')
+def update_order_status(data):
+    room = data['orgId']
+    orderId = data['orderId']
+    itemId = data['itemId']
+    newStatus = data['status']
+    role = data['role']
+    table = data['tableNum']
+    output = order_status(orderId, str(itemId), role, newStatus)
+    if (output["success"] == False):
+        emit("exception", output)
+        return
+    emit('notification', {"orderId": orderId, "itemId": itemId, "newStatus": newStatus, "table": table}, broadcast=True, to=room)
+    emit('orders',  get_order_queue(room), broadcast=True, to=room)
+    save(None)
+
+
+# =====================
+# ====== PAYMENT ======
+# =====================
+@app.route("/payment/orders/<tableNum>", methods=['GET'])
+def http_get_payment(tableNum):
+    return dumps(get_orders_of_table_for_payment(tableNum))
+
+
+# =====================
+# ====== REVIEWS ======
+# =====================
+
+@app.route("/reviews/<org_id>", methods=['POST'])
+def http_add_review(org_id):
+    input = request.get_json()
+    respObj = save(add_review(org_id, int(input["item_id"]), input["name"], input["description"], input["rating"]))
+    return respObj
+
+
+
+# =====================
+# ==== ASSISTANCE =====
+# =====================
+
+@app.route("/assistance/<org_id>", methods=["GET"])
+def http_see_assistance(org_id):
+    return get_assistance(org_id)
+
+
+@socketio.on('see-assistance')
+def socket_see_assistance(data):
+    room = data['orgId']
+    emit('assistance', get_assistance(room))
+    
+@socketio.on('update-assistance')
+def socket_update_assistance(data):
+    room = data['orgId']
+    tableId = data['tableId']
+    requiresAssistance = data["requiresAssistance"]
+    emit('assistance', update_assistance(room, tableId, requiresAssistance), broadcast=True, to=room)
+    if (requiresAssistance == True):
+        emit('assistance-notif', {"tableId": tableId}, broadcast=True, to=room)
+    save(None)
+
+# =====================
+# ==== STATISTICS =====
+# =====================
+
+@app.route("/statistics/items-sold/<org_id>/<start_date>/<end_date>", methods=['GET'])
+def http_statistics_in_date_range(org_id, start_date, end_date):
+    return dumps(statistics.get_statistics(org_id, start_date, end_date))
+
+@app.route("/statistics/season/<org_id>", methods=['GET'])
+def http_statistics_last_year(org_id):
+    return dumps(statistics.get_seasonal_statistics(org_id))
+
+
+
+# =====================
+# ==== RUN SERVER =====
+# =====================
+if __name__ == "__main__":
+
+    if (len(sys.argv) != 2):
+        print("Expected: python3 app.py backend OR python3 app.py frontend")
+        sys.exit()
+
+    if (sys.argv[1] == "backend" or sys.argv[1] == "frontend"):
+        app.config["type"] = sys.argv[1]
+        app.run(port=3001, debug=True)
+        socketio.run(app)
+
+
+
+

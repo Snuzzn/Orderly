@@ -1,0 +1,32 @@
+{
+    "queue": [
+        { 
+            "tableNum": 3, 
+            "orderTime": "XL"
+        },
+        {
+            "tableNum": 1,
+            "status": "Preparing",
+            "orderTime": "SM",
+            "orderId": 3,
+            "items": [
+                {
+                    "itemId": 2,
+                    "status": "Preparing"
+                }
+            ]
+        },
+        { 
+            "tableNum": 2, 
+            "orderTime": "SM"
+        },
+        { 
+            "tableNum": 2, 
+            "orderTime": "SM"
+        },
+        { 
+            "tableNum": 4, 
+            "orderTime": "SM"
+        }
+    ]
+}    

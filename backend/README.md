@@ -1,0 +1,27 @@
+# Getting Started
+
+First, create a `.env` file in this folder and place the following variables inside:
+```
+PROPELAUTH_AUTH_URL=...
+PROPELAUTH_API_KEY=...
+```
+You can find the values for this inside the discord server.
+
+`pip3 install virtualenv`
+
+Install the virtual environemnt:
+
+`python3 -m virtualenv venv/`
+
+Then run the virtual environment:
+
+`source venv/bin/activate`
+
+Next, install all the required packages with:
+
+`pip3 install -r requirements.txt`
+
+Finally, run the flask app with:
+
+`bash runFlask.sh frontend`
+

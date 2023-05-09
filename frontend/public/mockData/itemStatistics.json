@@ -1,0 +1,9 @@
+{
+    "item_sales": {
+        "Burger": 3,
+        "Fries": 9,
+        "Ramen": 3,
+        "Sushi": 1
+    },
+    "totalRevenue": 123
+}
